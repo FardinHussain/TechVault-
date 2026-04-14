@@ -93,7 +93,13 @@ const PORT = Number(process.env.PORT) || 3000;
 
 console.log("PORT:", PORT);
 
-const startServer = async () => {
+// 🔥 Start server FIRST (VERY IMPORTANT)
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
+
+// 🔥 Then run async stuff (non-blocking)
+(async () => {
   try {
     const dbOk = await connectDB();
 
@@ -103,13 +109,7 @@ const startServer = async () => {
       await ensureFallbackData();
     }
 
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Running on port ${PORT}`);
-    });
-
   } catch (err) {
-    console.error('❌ Startup failed:', err.message);
+    console.error('❌ Background init failed:', err.message);
   }
-};
-
-startServer();
+})();
