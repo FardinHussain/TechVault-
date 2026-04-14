@@ -43,9 +43,14 @@ app.put('/api/admin/orders/:id/status', protect, admin, updateOrderStatus);
 app.delete('/api/admin/products/:id', protect, admin, deleteProduct);
 app.get('/api/admin/users/count', protect, admin, getUserCount);
 
-// ── Fallback frontend ─────────────────────────────────────────
+// ✅ ── HEALTH CHECK (VERY IMPORTANT) ──────────────────────────
+app.get('/', (req, res) => {
+  res.status(200).send('TechVault API is running ✅');
+});
+
+// ── Fallback frontend (SAFE) ──────────────────────────────────
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
+  res.send('Fallback route working');
 });
 
 // ── Fallback JSON ─────────────────────────────────────────────
@@ -101,7 +106,7 @@ const autoSeed = async () => {
   }
 };
 
-// ── START SERVER (FINAL FIX) ──────────────────────────────────
+// ── START SERVER ──────────────────────────────────────────────
 const PORT = Number(process.env.PORT) || 3000;
 
 console.log("ENV PORT VALUE:", process.env.PORT);
