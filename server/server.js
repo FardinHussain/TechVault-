@@ -17,18 +17,20 @@ const { getUserCount } = require('./controllers/userController');
 
 const app = express();
 
+// ✅ VERY FIRST → health check (Railway needs this FAST)
+app.get('/', (req, res) => {
+  res.status(200).send('OK');
+});
+
 // ── Middleware ────────────────────────────────────────────────
 app.use(cors({
-  origin: [
-    'http://localhost:5000',
-    'http://127.0.0.1:5000',
-    'https://techhvault.netlify.app',
-  ],
-  credentials: true,
+  origin: '*', // avoid CORS blocking in production
 }));
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../public')));
+
+// ⚠️ TEMP DISABLE STATIC (prevents Railway issues)
+// app.use(express.static(path.join(__dirname, '../public')));
 
 // ── API Routes ────────────────────────────────────────────────
 app.use('/api/products', productRoutes);
@@ -43,95 +45,71 @@ app.put('/api/admin/orders/:id/status', protect, admin, updateOrderStatus);
 app.delete('/api/admin/products/:id', protect, admin, deleteProduct);
 app.get('/api/admin/users/count', protect, admin, getUserCount);
 
-// ✅ ── HEALTH CHECK (VERY IMPORTANT) ──────────────────────────
-app.get('/', (req, res) => {
-  res.status(200).send('TechVault API is running ✅');
-});
-
-// ── Fallback frontend (SAFE) ──────────────────────────────────
+// ── SAFE FALLBACK (MUST BE LAST) ──────────────────────────────
 app.get('*', (req, res) => {
-  res.send('Fallback route working');
+  res.status(200).send('OK');
 });
 
-// ── Fallback JSON ─────────────────────────────────────────────
+// ── FALLBACK JSON ─────────────────────────────────────────────
 const ensureFallbackData = async () => {
-  const dataDir = path.join(__dirname, 'data');
-  const jsonPath = path.join(dataDir, 'products.json');
-
-  if (fs.existsSync(jsonPath)) return;
-
   try {
+    const dataDir = path.join(__dirname, 'data');
+    const jsonPath = path.join(dataDir, 'products.json');
+
+    if (fs.existsSync(jsonPath)) return;
+
     const res = await fetch('https://dummyjson.com/products?limit=100');
     const data = await res.json();
 
     if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
-    const mapped = data.products.map(p => ({
-      _id: String(p.id),
-      title: p.title,
-      description: p.description,
-      price: p.price,
-      category: p.category,
-      stock: p.stock,
-      images: p.images,
-      thumbnail: p.thumbnail,
-      rating: p.rating,
-      numReviews: Math.floor(Math.random() * 50)
-    }));
-
-    fs.writeFileSync(jsonPath, JSON.stringify(mapped, null, 2));
-    console.log('✅ Fallback JSON saved');
-
+    fs.writeFileSync(jsonPath, JSON.stringify(data.products, null, 2));
+    console.log('✅ Fallback JSON ready');
   } catch (err) {
-    console.log('❌ Fallback fetch failed:', err.message);
+    console.log('⚠️ Fallback failed:', err.message);
   }
 };
 
-// ── Auto seed DB ──────────────────────────────────────────────
+// ── AUTO SEED ────────────────────────────────────────────────
 const autoSeed = async () => {
   try {
     const Product = require('./models/Product');
     const count = await Product.countDocuments();
 
     if (count === 0) {
-      console.log('🌱 Seeding database...');
+      console.log('🌱 Seeding DB...');
       const seedDB = require('./seed');
       await seedDB();
     } else {
-      console.log(`📦 ${count} products already exist`);
+      console.log(`📦 ${count} products exist`);
     }
-
   } catch (err) {
-    console.log('❌ Seed error:', err.message);
+    console.log('⚠️ Seed skipped:', err.message);
   }
 };
 
 // ── START SERVER ──────────────────────────────────────────────
 const PORT = Number(process.env.PORT) || 3000;
 
-console.log("ENV PORT VALUE:", process.env.PORT);
-console.log("FINAL PORT USED:", PORT);
+console.log("PORT:", PORT);
 
-(async () => {
+const startServer = async () => {
   try {
     const dbOk = await connectDB();
 
     if (dbOk) {
-      console.log('⏳ Waiting for DB ready...');
-      await new Promise(res => setTimeout(res, 1000));
       await autoSeed();
     } else {
       await ensureFallbackData();
     }
 
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`🔑 Admin → ${process.env.ADMIN_EMAIL}`);
-      console.log(`🗄️ DB → ${dbOk ? 'MongoDB Connected' : 'Fallback Mode'}`);
+      console.log(`🚀 Running on port ${PORT}`);
     });
 
-  } catch (error) {
-    console.error('❌ Server start failed:', error.message);
-    process.exit(1);
+  } catch (err) {
+    console.error('❌ Startup failed:', err.message);
   }
-})();
+};
+
+startServer();
