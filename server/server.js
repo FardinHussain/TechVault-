@@ -97,7 +97,11 @@ console.log("PORT:", PORT);
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
-
+setInterval(() => {
+  fetch(`http://localhost:${PORT}`)
+    .then(() => console.log("Self ping"))
+    .catch(() => {});
+}, 20000);
 // 🔥 Then run async stuff (non-blocking)
 (async () => {
   try {
