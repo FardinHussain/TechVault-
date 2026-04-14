@@ -91,29 +91,21 @@ const autoSeed = async () => {
 // ── START SERVER ──────────────────────────────────────────────
 const PORT = Number(process.env.PORT) || 3000;
 
-console.log("PORT:", PORT);
-
-// 🔥 Start server FIRST (VERY IMPORTANT)
+// Start server FIRST
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
-setInterval(() => {
-  fetch(`http://localhost:${PORT}`)
-    .then(() => console.log("Self ping"))
-    .catch(() => {});
-}, 20000);
-// 🔥 Then run async stuff (non-blocking)
+
+// Run DB init in background (won’t kill server if it fails)
 (async () => {
   try {
     const dbOk = await connectDB();
-
     if (dbOk) {
       await autoSeed();
     } else {
       await ensureFallbackData();
     }
-
   } catch (err) {
-    console.error('❌ Background init failed:', err.message);
+    console.error('⚠️ Background init error:', err.message);
   }
 })();
