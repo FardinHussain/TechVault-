@@ -20,9 +20,9 @@ const app = express();
 // ── Middleware ────────────────────────────────────────────────
 app.use(cors({
   origin: [
-    'http://localhost:8080',
-    'http://127.0.0.1:8080',
-    'https://your-netlify-site.netlify.app',
+    'http://localhost:5000',
+    'http://127.0.0.1:5000',
+    'https://techhvault.netlify.app',
   ],
   credentials: true,
 }));
@@ -104,7 +104,7 @@ const autoSeed = async () => {
 };
 
 // ── START SERVER (FIXED) ──────────────────────────────────────
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 5000;
 
 (async () => {
   try {
