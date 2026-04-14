@@ -104,7 +104,7 @@ const autoSeed = async () => {
 };
 
 // ── START SERVER (FIXED) ──────────────────────────────────────
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 8080;
 
 (async () => {
   try {
