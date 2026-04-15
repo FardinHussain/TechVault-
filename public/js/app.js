@@ -6,10 +6,6 @@ const getToken = () => localStorage.getItem('tvToken');
 const getUser  = () => {
   try { return JSON.parse(localStorage.getItem('tvUser')); } catch { return null; }
 };
-const clearAuth = () => {
-  localStorage.removeItem('tvToken');
-  localStorage.removeItem('tvUser');
-};
 
 /* ── API fetch wrapper ───────────────────────────────────────── */
 const apiFetch = async (path, options = {}) => {
@@ -28,7 +24,7 @@ const apiFetch = async (path, options = {}) => {
   }
 };
 
-/* ── Price & Stars Helpers ───────────────────────────────────── */
+/* ── Helpers ─────────────────────────────────────────────────── */
 const fmt = (n) => '$' + Number(n || 0).toFixed(2);
 const discountedPrice = (price, pct) => price * (1 - (pct || 0) / 100);
 
@@ -39,7 +35,7 @@ const renderStars = (rating) => {
   return s;
 };
 
-/* ── Product Card Builder (Restored) ─────────────────────────── */
+/* ── Product Card Builder ────────────────────────────────────── */
 const buildProductCard = (p) => {
   const id = p._id;
   const dp = discountedPrice(p.price, p.discountPercentage);
@@ -72,19 +68,24 @@ const buildProductCard = (p) => {
   return card;
 };
 
-/* ── Skeletons (Restored) ────────────────────────────────────── */
+/* ── Skeleton Loaders ────────────────────────────────────────── */
 const buildSkeletons = (n = 8) => {
   const frag = document.createDocumentFragment();
   for (let i = 0; i < n; i++) {
     const el = document.createElement('div');
     el.className = 'skeleton-card';
-    el.innerHTML = `<div class="skeleton skeleton-img"></div><div class="skeleton-body"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line short"></div></div>`;
+    el.innerHTML = `
+      <div class="skeleton skeleton-img"></div>
+      <div class="skeleton-body">
+        <div class="skeleton skeleton-line"></div>
+        <div class="skeleton skeleton-line short"></div>
+      </div>`;
     frag.appendChild(el);
   }
   return frag;
 };
 
-/* ── Navbar Logic (Fixed & Restored) ─────────────────────────── */
+/* ── Navbar Logic ────────────────────────────────────────────── */
 const hydrateNavbar = () => {
   const user = getUser();
   const loginLink = document.getElementById('nav-login-link');
@@ -107,8 +108,22 @@ const hydrateNavbar = () => {
   }
 };
 
-/* ── Init ────────────────────────────────────────────────────── */
+/* ── Load Data ───────────────────────────────────────────────── */
+const loadCategories = async () => {
+  const container = document.getElementById('categories-container');
+  if (!container) return;
+
+  const data = await apiFetch('/api/products/categories');
+  if (data && data.status === 'success') {
+    container.innerHTML = data.categories.map(c => 
+      `<button class="category-btn" onclick="location.href='search.html?category=${c}'">${c}</button>`
+    ).join('');
+  }
+};
+
+/* ── Initialize ──────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
   hydrateNavbar();
-  console.log("System Ready. Connected to Render.");
+  loadCategories(); // This will fetch your categories
+  console.log("App Initialized. Connected to:", API_URL);
 });
