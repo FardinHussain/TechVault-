@@ -3,6 +3,15 @@ const getToken = () => localStorage.getItem('tvToken');
 const getUser  = () => {
   try { return JSON.parse(localStorage.getItem('tvUser')); } catch { return null; }
 };
+const isLoggedIn = () => !!getToken();
+const isAdmin    = () => { const u = getUser(); return u && u.isAdmin; };
+
+const setAuth = (data) => {
+  localStorage.setItem('tvToken', data.token);
+  localStorage.setItem('tvUser', JSON.stringify({
+    _id: data._id, name: data.name, email: data.email, isAdmin: data.isAdmin
+  }));
+};
 const clearAuth = () => {
   localStorage.removeItem('tvToken');
   localStorage.removeItem('tvUser');
@@ -20,7 +29,7 @@ const apiFetch = async (path, options = {}) => {
     if (!res.ok) throw new Error(data.message || `Request failed (${res.status})`);
     return data;
   } catch (err) {
-    console.error("API Error:", err);
+    console.error("API Error:", err.message);
     throw err;
   }
 };
@@ -40,17 +49,42 @@ const showToast = (message, type = 'info', duration = 3500) => {
   }, duration);
 };
 
-/* ── Cart Helpers ────────────────────────────────────────────── */
+/* ── Helpers ─────────────────────────────────────────────────── */
+const renderStars = (rating) => {
+  const full = Math.round(rating || 0);
+  let s = '';
+  for (let i = 1; i <= 5; i++) s += i <= full ? '★' : '☆';
+  return s;
+};
+const fmt = (n) => '$' + Number(n || 0).toFixed(2);
+const discountedPrice = (p, pct) => p * (1 - (pct || 0) / 100);
+
+/* ── Cart Logic ──────────────────────────────────────────────── */
 const Cart = {
   get() { try { return JSON.parse(localStorage.getItem('tvCart')) || []; } catch { return []; } },
   save(items) {
     localStorage.setItem('tvCart', JSON.stringify(items));
     Cart.updateBadge();
   },
-  count() { return Cart.get().reduce((a, i) => a + i.qty, 0); },
+  add(product, qty = 1) {
+    const items = Cart.get();
+    const id = String(product._id);
+    const existing = items.find(i => i._id === id);
+    if (existing) {
+      existing.qty = Math.min(existing.qty + qty, product.stock || 999);
+    } else {
+      items.push({
+        _id: id, title: product.title, brand: product.brand,
+        price: product.price, discountPercentage: product.discountPercentage || 0,
+        thumbnail: product.thumbnail, stock: product.stock || 999, qty,
+      });
+    }
+    Cart.save(items);
+    showToast(`"${product.title}" added to cart`, 'success');
+  },
   updateBadge() {
     document.querySelectorAll('.cart-badge').forEach(el => {
-      const c = Cart.count();
+      const c = Cart.get().reduce((a, i) => a + i.qty, 0);
       el.textContent = c > 99 ? '99+' : c;
       el.classList.toggle('hidden', c === 0);
     });
@@ -58,37 +92,28 @@ const Cart = {
 };
 
 /* ── UI Builders ─────────────────────────────────────────────── */
-const renderStars = (rating) => {
-  const full = Math.round(rating || 0);
-  let s = '';
-  for (let i = 1; i <= 5; i++) s += i <= full ? '★' : '☆';
-  return s;
-};
-
 const buildProductCard = (p) => {
   const id = p._id;
-  const price = p.price || 0;
-  const disc = p.discountPercentage || 0;
-  const dp = price * (1 - disc / 100);
-
+  const dp = discountedPrice(p.price, p.discountPercentage);
+  const hasDis = (p.discountPercentage || 0) >= 1;
   const card = document.createElement('div');
   card.className = 'product-card';
   card.innerHTML = `
     <div class="product-card-img" onclick="location.href='product.html?id=${id}'">
-      ${disc >= 1 ? `<div class="product-card-discount">-${Math.round(disc)}%</div>` : ''}
-      <img src="${p.thumbnail || 'https://via.placeholder.com/300x300?text=No+Image'}" alt="${p.title}">
+      ${hasDis ? `<div class="product-card-discount">-${Math.round(p.discountPercentage)}%</div>` : ''}
+      <img src="${p.thumbnail || ''}" alt="${p.title}" onerror="this.src='https://via.placeholder.com/300'">
     </div>
     <div class="product-card-body">
-      <div class="product-card-brand">${p.brand || 'Generic'}</div>
+      <div class="product-card-brand">${p.brand || 'TechVault'}</div>
       <div class="product-card-title">${p.title}</div>
       <div class="product-card-price">
-        <span class="current">$${dp.toFixed(2)}</span>
+        <span class="current">${fmt(hasDis ? dp : p.price)}</span>
       </div>
     </div>`;
   return card;
 };
 
-const buildSkeletons = (n = 8) => {
+const buildSkeletons = (n = 4) => {
   const frag = document.createDocumentFragment();
   for (let i = 0; i < n; i++) {
     const el = document.createElement('div');
@@ -110,6 +135,10 @@ const hydrateNavbar = () => {
       mMenu.classList.toggle('open');
     };
   }
+  document.getElementById('nav-logout-btn')?.addEventListener('click', () => {
+    clearAuth();
+    location.href = 'index.html';
+  });
 };
 
 document.addEventListener('DOMContentLoaded', hydrateNavbar);

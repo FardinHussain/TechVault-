@@ -352,3 +352,13 @@ textarea.form-input { resize: vertical; min-height: 100px; }
 .status-Shipped    { background: rgba(251,140,0,.15);   color: #ffb74d; border: 1px solid rgba(251,140,0,.3); }
 .status-Delivered  { background: rgba(67,160,71,.15);   color: #81c784; border: 1px solid rgba(67,160,71,.3); }
 .status-Cancelled  { background: rgba(229,57,53,.15);   color: #ef9a9a; border: 1px solid rgba(229,57,53,.3); }
+/* FIX: Category Visibility */
+.categories-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; margin: 20px 0; }
+.category-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 25px; text-align: center; cursor: pointer; transition: 0.3s; }
+.category-card:hover { border-color: var(--accent); transform: translateY(-5px); }
+.category-icon { font-size: 40px; margin-bottom: 10px; }
+.category-name { font-size: 15px; font-weight: 700; color: #ffffff !important; text-transform: capitalize; }
+
+/* FIX: Toast Visibility */
+#toast-container { position: fixed; top: 100px; right: 20px; z-index: 100000; pointer-events: none; }
+.toast { background: var(--surface2) !important; color: white !important; border: 1px solid var(--border-light) !important; opacity: 1 !important; visibility: visible !important; }
